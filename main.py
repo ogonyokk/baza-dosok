@@ -108,6 +108,13 @@ class App(tk.Tk):
                                command=self.export_excel, padx=10, pady=8)
         export_btn.pack(fill="x", padx=12, pady=4)
 
+        del_all_btn = tk.Button(nav, text="🗑  Удалить всё",
+                               font=FONT_BTN, bg="#3A1A1A", fg=RED,
+                               relief="flat", cursor="hand2",
+                               activebackground="#5A2020", activeforeground=RED,
+                               command=self._confirm_delete_all, padx=10, pady=8)
+        del_all_btn.pack(fill="x", padx=12, pady=(0,16))
+
         # Правая область контента
         self.content = tk.Frame(self, bg=BG_DARK)
         self.content.pack(side="left", fill="both", expand=True)
@@ -122,6 +129,12 @@ class App(tk.Tk):
         self.current_page = None
         self.show_page("dashboard")
 
+    def _confirm_delete_all(self):
+        if messagebox.askyesno("Удалить всё", "Удалить ВСЕ данные (приход и расход)?\nЭто действие нельзя отменить!"):
+            self.delete_all()
+            for page in self.pages.values():
+                page.refresh()
+
     def show_page(self, key):
         if self.current_page:
             self.pages[self.current_page].pack_forget()
@@ -134,16 +147,20 @@ class App(tk.Tk):
     def add_prikhod(self, row):
         self.data["prikhod"].append(row)
         save_data(self.data)
-        self._refresh_current()
+        self._refresh_all()
 
     def add_raskhod(self, row):
         self.data["raskhod"].append(row)
         save_data(self.data)
-        self._refresh_current()
+        self._refresh_all()
 
     def _refresh_current(self):
         if self.current_page:
             self.pages[self.current_page].refresh()
+
+    def _refresh_all(self):
+        for page in self.pages.values():
+            page.refresh()
 
     def delete_prikhod(self, idx):
         del self.data["prikhod"][idx]
@@ -153,6 +170,11 @@ class App(tk.Tk):
         del self.data["raskhod"][idx]
         save_data(self.data)
 
+    def delete_all(self):
+        self.data = {"prikhod": [], "raskhod": []}
+        save_data(self.data)
+        self._refresh_current()
+
     def get_totals(self):
         total_in  = sum(r.get("summa", 0) for r in self.data["prikhod"])
         total_out = sum(r.get("summa", 0) for r in self.data["raskhod"])
@@ -161,7 +183,7 @@ class App(tk.Tk):
 
     def get_profit_display(self):
         ti, to, pr = self.get_totals()
-        return ti, to, abs(pr), pr >= 0, ("Прибыль" if pr >= 0 else "Убыток")
+        return ti, to, abs(pr), pr >= 0, "ИТОГ"
 
     def export_excel(self):
         if not OPENPYXL_OK:
