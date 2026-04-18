@@ -134,10 +134,16 @@ class App(tk.Tk):
     def add_prikhod(self, row):
         self.data["prikhod"].append(row)
         save_data(self.data)
+        self._refresh_current()
 
     def add_raskhod(self, row):
         self.data["raskhod"].append(row)
         save_data(self.data)
+        self._refresh_current()
+
+    def _refresh_current(self):
+        if self.current_page:
+            self.pages[self.current_page].refresh()
 
     def delete_prikhod(self, idx):
         del self.data["prikhod"][idx]
