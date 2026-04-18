@@ -59,7 +59,6 @@ class App(tk.Tk):
         self.configure(bg=BG_DARK)
         self.data = load_data()
 
-        # Центрировать окно
         self.update_idletasks()
         x = (self.winfo_screenwidth() - 1100) // 2
         y = (self.winfo_screenheight() - 700) // 2
@@ -68,12 +67,10 @@ class App(tk.Tk):
         self._build_ui()
 
     def _build_ui(self):
-        # Левая панель навигации
         nav = tk.Frame(self, bg=BG_CARD, width=220)
         nav.pack(side="left", fill="y")
         nav.pack_propagate(False)
 
-        # Логотип
         logo_frame = tk.Frame(nav, bg=BG_CARD)
         logo_frame.pack(fill="x", pady=(28, 8))
         tk.Label(logo_frame, text="📦", font=("Segoe UI", 32),
@@ -83,10 +80,8 @@ class App(tk.Tk):
         tk.Label(logo_frame, text="Складской учёт", font=FONT_SMALL,
                  bg=BG_CARD, fg=TEXT_DIM).pack(pady=(2, 0))
 
-        # Разделитель
         tk.Frame(nav, bg=BORDER_CLR, height=1).pack(fill="x", padx=20, pady=20)
 
-        # Кнопки меню
         self.nav_buttons = {}
         menu_items = [
             ("📊", "Дашборд",   "dashboard"),
@@ -99,7 +94,6 @@ class App(tk.Tk):
             btn.pack(fill="x", padx=12, pady=3)
             self.nav_buttons[key] = btn
 
-        # Кнопка экспорта внизу
         tk.Frame(nav, bg=BORDER_CLR, height=1).pack(fill="x", padx=20, pady=20)
         export_btn = tk.Button(nav, text="💾  Экспорт в Excel",
                                font=FONT_BTN, bg=ACCENT2, fg="#000",
@@ -115,11 +109,9 @@ class App(tk.Tk):
                                command=self._confirm_delete_all, padx=10, pady=8)
         del_all_btn.pack(fill="x", padx=12, pady=(0,16))
 
-        # Правая область контента
         self.content = tk.Frame(self, bg=BG_DARK)
         self.content.pack(side="left", fill="both", expand=True)
 
-        # Страницы
         self.pages = {}
         self.pages["dashboard"] = DashboardPage(self.content, self)
         self.pages["prikhod"]   = PrikhodPage(self.content, self)
@@ -153,10 +145,6 @@ class App(tk.Tk):
         self.data["raskhod"].append(row)
         save_data(self.data)
         self._refresh_all()
-
-    def _refresh_current(self):
-        if self.current_page:
-            self.pages[self.current_page].refresh()
 
     def _refresh_all(self):
         for page in self.pages.values():
@@ -283,19 +271,6 @@ class DashboardPage(tk.Frame):
         self.app = app
         self._built = False
 
-    def refresh(self):
-        if not self._built:
-            self._build()
-            self._built = True
-        ti, to, pr = self.app.get_totals()
-        self.card_in.update(ti)
-        self.card_out.update(to)
-        color = ACCENT if pr >= 0 else RED
-        self.card_profit.val_lbl.configure(fg=color)
-        self.card_profit.update(pr)
-        self.cnt_in.configure(text=f"Записей: {len(self.app.data['prikhod'])}")
-        self.cnt_out.configure(text=f"Записей: {len(self.app.data['raskhod'])}")
-
     def _build(self):
         page_header(self, "📊 Дашборд", "Общая сводка по складу")
         cards_row = tk.Frame(self, bg=BG_DARK)
@@ -308,7 +283,6 @@ class DashboardPage(tk.Frame):
         for c in (self.card_in, self.card_out, self.card_profit):
             c.pack(side="left", fill="both", expand=True, padx=6, pady=4)
 
-        # Подсчёт записей
         cnt_row = tk.Frame(self, bg=BG_DARK)
         cnt_row.pack(fill="x", padx=30, pady=(10, 0))
         self.cnt_in  = tk.Label(cnt_row, text="", font=FONT_SMALL, bg=BG_DARK, fg=TEXT_DIM)
@@ -317,7 +291,6 @@ class DashboardPage(tk.Frame):
         self.cnt_out.pack(side="left", expand=True)
         tk.Label(cnt_row, text="", bg=BG_DARK).pack(side="left", expand=True)
 
-        # Последние операции
         tk.Frame(self, bg=BORDER_CLR, height=1).pack(fill="x", padx=30, pady=18)
         tk.Label(self, text="Последние операции", font=FONT_HEAD,
                  bg=BG_DARK, fg=TEXT_HEADER).pack(anchor="w", padx=30)
@@ -336,7 +309,6 @@ class DashboardPage(tk.Frame):
         self.cnt_in.configure(text=f"Записей прихода: {len(self.app.data['prikhod'])}")
         self.cnt_out.configure(text=f"Записей расхода: {len(self.app.data['raskhod'])}")
 
-        # Обновить последние записи
         for w in self.recent_frame.winfo_children():
             w.destroy()
 
@@ -376,6 +348,7 @@ class AddForm(tk.Frame):
         self.entries = {}
         self.on_add = on_add
         self.color = color
+        self.fields = fields  # сохраняем для очистки
 
         row = tk.Frame(self, bg=BG_CARD)
         row.pack(fill="x")
@@ -398,11 +371,27 @@ class AddForm(tk.Frame):
             e.pack(fill="x", ipady=6, pady=(4,0))
             self.entries[key] = e
 
+        # Кнопка Добавить
         btn = tk.Button(row, text="＋  Добавить", font=FONT_BTN,
-                        bg=color, fg="#000" if color==ACCENT else "#000",
+                        bg=color, fg="#000",
                         relief="flat", cursor="hand2", padx=14, pady=8,
                         activebackground=ACCENT_DARK, command=self._submit)
         btn.pack(side="left", padx=(10,0), pady=(18,0))
+
+        # ── НОВАЯ КНОПКА: Очистить поля ──────────────────────────────────────
+        clear_btn = tk.Button(row, text="✕  Очистить", font=FONT_BTN,
+                              bg="#2A1A1A", fg=RED,
+                              relief="flat", cursor="hand2", padx=14, pady=8,
+                              activebackground="#4A2020", activeforeground=RED,
+                              command=self._clear)
+        clear_btn.pack(side="left", padx=(6,0), pady=(18,0))
+
+    def _clear(self):
+        """Очищает все поля формы и восстанавливает дату."""
+        for key, e in self.entries.items():
+            e.delete(0, "end")
+            if key == "data":
+                e.insert(0, datetime.now().strftime("%d.%m.%Y"))
 
     def _submit(self):
         vals = {k: e.get().strip() for k, e in self.entries.items()}
@@ -468,7 +457,6 @@ class PrikhodPage(tk.Frame):
         self.form = AddForm(self, fields, self._add, color=ACCENT)
         self.form.pack(fill="x", padx=30, pady=(0, 14))
 
-        # Авто-расчёт суммы
         self.form.entries["kol"].bind("<KeyRelease>",  self._calc)
         self.form.entries["cena"].bind("<KeyRelease>", self._calc)
 
@@ -503,9 +491,10 @@ class PrikhodPage(tk.Frame):
         rec = {"naim": vals["naim"], "kol": kol, "cena": cena,
                "summa": summa, "post": vals["post"], "data": vals["data"]}
         self.app.add_prikhod(rec)
-        for e in self.form.entries.values():
+        for key, e in self.form.entries.items():
             e.delete(0, "end")
-        self.form.entries["data"].insert(0, datetime.now().strftime("%d.%m.%Y"))
+            if key == "data":
+                e.insert(0, datetime.now().strftime("%d.%m.%Y"))
         self.sum_lbl.configure(text="Сумма: 0 ₸")
         self.refresh()
 
@@ -579,9 +568,10 @@ class RaskhodPage(tk.Frame):
         rec = {"naim": vals["naim"], "kol": kol, "cena": cena,
                "summa": summa, "buyer": vals["buyer"], "data": vals["data"]}
         self.app.add_raskhod(rec)
-        for e in self.form.entries.values():
+        for key, e in self.form.entries.items():
             e.delete(0, "end")
-        self.form.entries["data"].insert(0, datetime.now().strftime("%d.%m.%Y"))
+            if key == "data":
+                e.insert(0, datetime.now().strftime("%d.%m.%Y"))
         self.sum_lbl.configure(text="Сумма: 0 ₸")
         self.refresh()
 
@@ -612,14 +602,12 @@ class OtchetPage(tk.Frame):
     def _build(self):
         page_header(self, "📋 Итоговый отчёт", "Сводная таблица по всем операциям")
 
-        # Итоговые блоки
         self.summary = tk.Frame(self, bg=BG_DARK)
         self.summary.pack(fill="x", padx=30, pady=(0,18))
         self.lbl_in     = self._sum_box(self.summary, "📥 Общий приход", ACCENT)
         self.lbl_out    = self._sum_box(self.summary, "📤 Общий расход", ACCENT2)
         self.lbl_profit = self._sum_box(self.summary, "💰 Прибыль",      ACCENT)
 
-        # Сводная таблица по товарам
         tk.Label(self, text="Сводка по наименованиям", font=FONT_HEAD,
                  bg=BG_DARK, fg=TEXT_HEADER).pack(anchor="w", padx=30, pady=(0,6))
         hdrs = [("Наименование",20),("Приход шт",8),("Приход ₸",10),
@@ -642,7 +630,6 @@ class OtchetPage(tk.Frame):
         color = ACCENT if is_profit else RED
         self.lbl_profit.configure(fg=color, text=f"{pr_abs:,.0f} ₸".replace(",", " "))
 
-        # Сводка по товарам
         merged = {}
         for r in self.app.data["prikhod"]:
             n = r.get("naim","")
@@ -708,7 +695,6 @@ def _write_sheet_prikhod(wb, data):
         _xl_style(ws, i, 5, r.get("summa",0), bg=bg, fg="00C896", align="right")
         _xl_style(ws, i, 6, r.get("post",""), bg=bg, fg="E8F4F0")
         _xl_style(ws, i, 7, r.get("data",""), bg=bg, fg="7A9FAF", align="center")
-    # Итог
     last = len(data) + 2
     total = sum(r.get("summa",0) for r in data)
     _xl_style(ws, last, 1, "ИТОГО:", bold=True, bg="0A1F2E", fg="FFFFFF")
@@ -780,7 +766,6 @@ def _write_sheet_otchet(wb, data):
         _xl_style(ws, i, 6, int(ostatok),bg=bg, fg="E8F4F0", align="center")
         _xl_style(ws, i, 7, raznica_abs, bg=bg, fg=raznica_color, align="right")
 
-    # Итоги
     last = len(merged) + 2
     ws.row_dimensions[last].height = 24
     ti = sum(v["ps"] for v in merged.values())
@@ -791,8 +776,6 @@ def _write_sheet_otchet(wb, data):
     _xl_style(ws, last, 3, ti,        bold=True, bg="0A1F2E", fg="00C896", align="right")
     _xl_style(ws, last, 5, to,        bold=True, bg="0A1F2E", fg="F0A500", align="right")
     _xl_style(ws, last, 7, pr_abs,    bold=True, bg="0A1F2E", fg="00C896" if pr>=0 else "FF5A5A", align="right")
-
-
 
 
 # ─── ЗАПУСК ───────────────────────────────────────────────────────────────────
