@@ -161,19 +161,22 @@ class App(tk.Tk):
     def _refresh_all(self):
         for page in self.pages.values():
             page.refresh()
+        self.update_idletasks()
 
     def delete_prikhod(self, idx):
         del self.data["prikhod"][idx]
         save_data(self.data)
+        self._refresh_all()
 
     def delete_raskhod(self, idx):
         del self.data["raskhod"][idx]
         save_data(self.data)
+        self._refresh_all()
 
     def delete_all(self):
         self.data = {"prikhod": [], "raskhod": []}
         save_data(self.data)
-        self._refresh_current()
+        self._refresh_all()
 
     def get_totals(self):
         total_in  = sum(r.get("summa", 0) for r in self.data["prikhod"])
@@ -512,6 +515,8 @@ class PrikhodPage(tk.Frame):
             self.refresh()
 
     def refresh(self):
+        if not self.app.data["prikhod"]:
+            self.sum_lbl.configure(text="Сумма: 0 ₸")
         rows = []
         for i, r in enumerate(self.app.data["prikhod"], 1):
             rows.append([i, r.get("naim",""), int(r.get("kol",0)),
@@ -586,6 +591,8 @@ class RaskhodPage(tk.Frame):
             self.refresh()
 
     def refresh(self):
+        if not self.app.data["raskhod"]:
+            self.sum_lbl.configure(text="Сумма: 0 ₸")
         rows = []
         for i, r in enumerate(self.app.data["raskhod"], 1):
             rows.append([i, r.get("naim",""), int(r.get("kol",0)),
